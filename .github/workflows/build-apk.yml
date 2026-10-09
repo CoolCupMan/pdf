@@ -35,6 +35,8 @@ jobs:
           base=$(grep '^appVersionBase=' gradle.properties | cut -d= -f2)
           echo "version=${base}.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
           ls -l app/build/outputs/apk/release/
+          cd app/build/outputs/apk/release
+          for f in *.apk; do sha256sum "$f" > "$f.sha256"; zip -j "${f%.apk}.zip" "$f"; done
 
       - uses: actions/upload-artifact@v4
         with:
@@ -48,7 +50,10 @@ jobs:
           name: PDF Extraktor ${{ steps.ver.outputs.version }}
           target_commitish: ${{ github.sha }}
           prerelease: true
-          files: app/build/outputs/apk/release/*.apk
+          files: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/release/*.zip
+            app/build/outputs/apk/release/*.sha256
           body: |
             Version ${{ steps.ver.outputs.version }}
             Application-ID: com.coolcupman.pdfextractor.v${{ steps.ver.outputs.version }} (Punkte → _)

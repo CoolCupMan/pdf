@@ -29,7 +29,9 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             // Mit Debug-Key signiert, damit die APK direkt installierbar ist.
             signingConfig = signingConfigs.getByName("debug")
         }
@@ -50,6 +52,8 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            // Post-Quantum-Tabellen von BouncyCastle (~4 MB), von PDFBox nicht benötigt
+            excludes += "/org/bouncycastle/pqc/**"
         }
     }
 }

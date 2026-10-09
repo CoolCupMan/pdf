@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="pick_pdf">PDF auswählen</string>
+    <string name="no_file">Noch kein PDF geladen</string>
+    <string name="file_info">%1$s – %2$d Seiten</string>
+    <string name="start_hint">Von: Seitenzahl (z. B. 56) oder Suchtext</string>
+    <string name="start_help">Leer = ab Seite 1. Zahl in Anführungszeichen (\"56\") = als Text suchen.</string>
+    <string name="end_hint">Bis: Seitenzahl (z. B. 98) oder Suchtext</string>
+    <string name="end_help">Leer = bis zum Ende. Text wird erst nach der Startseite gesucht. Auch 25/100 möglich.</string>
+    <string name="fraction_hint" formatted="false">Prozentual bis: z. B. 25/100, 50/100, 25%</string>
+    <string name="fraction_help">Bezogen auf das ganze Dokument: 25/100 bei 1000 Seiten = bis Seite 250. Hat Vorrang vor „Bis“.</string>
+    <string name="to_end">Automatisch bis zum Ende des Dokuments</string>
+    <string name="include_end">Seite mit dem End-Text einschließen</string>
+    <string name="check">Bereich prüfen</string>
+    <string name="extract">PDF extrahieren</string>
+    <string name="extract_txt">Als TXT speichern</string>
+    <string name="loading">PDF wird geladen …</string>
+    <string name="loaded">Geladen: %1$d Seiten</string>
+    <string name="searching">Bereich wird ermittelt …</string>
+    <string name="search_progress">Durchsuche Seite %1$d von %2$d …</string>
+    <string name="writing">Wird gespeichert …</string>
+    <string name="range_info">Seiten %1$d–%2$d (%3$d von %4$d Seiten)\n%5$s\n%6$s</string>
+    <string name="saved_pdf">Gespeichert: Seiten %1$d–%2$d (%3$d Seiten)</string>
+    <string name="saved_txt">Text gespeichert: Seiten %1$d–%2$d</string>
+    <string name="error">Fehler: %1$s</string>
+    <string name="version_info">Version %1$s\nID: %2$s</string>
+</resources>

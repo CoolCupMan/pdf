@@ -9,3 +9,6 @@
 -dontwarn javax.**
 -dontwarn java.awt.**
 -dontwarn org.slf4j.**
+
+# Eigene App-Klassen (klein) unverändert lassen – ViewModel wird per Reflection erzeugt
+-keep class com.coolcupman.pdfextractor.** { *; }

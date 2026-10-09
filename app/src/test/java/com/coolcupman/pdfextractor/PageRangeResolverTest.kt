@@ -16,10 +16,11 @@ class PageRangeResolverTest {
     private fun resolve(
         start: String = "",
         end: String = "",
+        fromFraction: String = "",
         fraction: String = "",
         toEnd: Boolean = false,
         include: Boolean = true,
-    ) = resolver.resolve(start, end, fraction, toEnd, include)
+    ) = resolver.resolve(start, end, fromFraction, fraction, toEnd, include)
 
     @Test fun startPageToEnd() {
         val r = resolve(start = "56")
@@ -59,9 +60,21 @@ class PageRangeResolverTest {
         assertEquals(1000, resolve(start = "56", end = "98", fraction = "25/100", toEnd = true).end)
     }
 
+    @Test fun fractionFromTo() {
+        assertEquals(1 to 250, resolve(fromFraction = "0/100", fraction = "25/100").let { it.start to it.end })
+        assertEquals(251 to 500, resolve(fromFraction = "25/100", fraction = "50/100").let { it.start to it.end })
+        assertEquals(751 to 1000, resolve(fromFraction = "75/100").let { it.start to it.end })
+        assertEquals(126, resolve(fromFraction = "25/200").start)
+        assertEquals(1000, resolve(fromFraction = "100/100").start)
+    }
+
+    @Test fun fractionFromOverridesStartField() {
+        assertEquals(501, resolve(start = "56", fromFraction = "50%").start)
+    }
+
     @Test fun quotedNumberIsText() {
         val r = PageRangeResolver(3, { if (it == 2) "Nummer 56" else "x" })
-            .resolve("\"56\"", "", "", false, true)
+            .resolve("\"56\"", "", "", "", false, true)
         assertEquals(2, r.start)
     }
 
@@ -72,6 +85,8 @@ class PageRangeResolverTest {
         assertFails { resolve(fraction = "150/100") }
         assertFails { resolve(fraction = "abc") }
         assertFails { resolve(start = "900", fraction = "25/100") }
+        assertFails { resolve(fromFraction = "50/100", fraction = "25/100") }
+        assertFails { resolve(fromFraction = "Kapitel 2") }
     }
 
     private fun assertFails(block: () -> Unit) {

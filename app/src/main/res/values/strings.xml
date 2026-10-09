@@ -1,27 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="pick_pdf">PDF auswählen</string>
+    <!-- 1. Import -->
+    <string name="section_import">1. PDF importieren</string>
+    <string name="import_pdf">PDF importieren (Dateimanager)</string>
     <string name="no_file">Noch kein PDF geladen</string>
-    <string name="file_info">%1$s – %2$d Seiten</string>
-    <string name="start_hint">Von: Seitenzahl (z. B. 56) oder Suchtext</string>
-    <string name="start_help">Leer = ab Seite 1. Zahl in Anführungszeichen (\"56\") = als Text suchen.</string>
-    <string name="end_hint">Bis: Seitenzahl (z. B. 98) oder Suchtext</string>
-    <string name="end_help">Leer = bis zum Ende. Text wird erst nach der Startseite gesucht. Auch 25/100 möglich.</string>
-    <string name="fraction_hint" formatted="false">Prozentual bis: z. B. 25/100, 50/100, 25%</string>
-    <string name="fraction_help">Bezogen auf das ganze Dokument: 25/100 bei 1000 Seiten = bis Seite 250. Hat Vorrang vor „Bis“.</string>
+    <string name="file_info">%1$s\n%2$d Seiten · %3$s</string>
+    <string name="import_help">Öffnet die Dateiauswahl (Downloads, Google Files, Drive …). Alternativ in Google Files: PDF antippen → „Öffnen mit“ oder „Teilen“ → PDF Extraktor.</string>
+
+    <!-- 2. Bereich -->
+    <string name="section_pages">2. Bereich nach Seitenzahl oder Text</string>
+    <string name="from">Von</string>
+    <string name="to">Bis</string>
+    <string name="pages_help">Seitenzahl (z. B. 56 bis 98) oder Suchtext (z. B. Kapitel 2 bis Kapitel 3). Von leer = Seite 1, Bis leer = Ende. Zahl als Text suchen: in Anführungszeichen, z. B. \"56\".</string>
+    <string name="section_percent">… oder prozentual</string>
+    <string name="from_percent" formatted="false">Von %</string>
+    <string name="to_percent" formatted="false">Bis %</string>
+    <string name="percent_help">Bezogen auf das ganze Dokument, z. B. 25/100 bis 50/100 = Seiten 251–500 bei 1000 Seiten. Auch 25% möglich. Ausgefüllte Prozentfelder haben Vorrang.</string>
     <string name="to_end">Automatisch bis zum Ende des Dokuments</string>
     <string name="include_end">Seite mit dem End-Text einschließen</string>
     <string name="check">Bereich prüfen</string>
-    <string name="extract">PDF extrahieren</string>
-    <string name="extract_txt">Als TXT speichern</string>
+
+    <!-- 3. Export -->
+    <string name="section_export">3. Exportieren</string>
+    <string name="choose_folder">Exportordner wählen</string>
+    <string name="no_folder">Kein Exportordner gewählt – beim Export wird nach dem Speicherort gefragt.</string>
+    <string name="folder_info">Exportpfad: %1$s</string>
+    <string name="filename_hint">Dateiname (leer = automatisch)</string>
+    <string name="export_pdf">PDF exportieren</string>
+    <string name="export_txt">TXT exportieren</string>
+    <string name="open_result">Öffnen</string>
+    <string name="share_result">Teilen</string>
+
+    <!-- Status -->
     <string name="loading">PDF wird geladen …</string>
     <string name="loaded">Geladen: %1$d Seiten</string>
     <string name="searching">Bereich wird ermittelt …</string>
     <string name="search_progress">Durchsuche Seite %1$d von %2$d …</string>
     <string name="writing">Wird gespeichert …</string>
     <string name="range_info">Seiten %1$d–%2$d (%3$d von %4$d Seiten)\n%5$s\n%6$s</string>
-    <string name="saved_pdf">Gespeichert: Seiten %1$d–%2$d (%3$d Seiten)</string>
-    <string name="saved_txt">Text gespeichert: Seiten %1$d–%2$d</string>
+    <string name="saved_to">Gespeichert (Seiten %1$d–%2$d, %3$d Seiten):\n%4$s</string>
     <string name="error">Fehler: %1$s</string>
-    <string name="version_info">Version %1$s\nID: %2$s</string>
+    <string name="no_viewer">Keine App zum Öffnen gefunden.</string>
+    <string name="version_info">Version %1$s · Build %2$d\nApp-ID: %3$s</string>
+    <string name="internal_storage">Interner Speicher</string>
+    <string name="sd_card">SD-Karte</string>
 </resources>

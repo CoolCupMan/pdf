@@ -1,133 +1,302 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true">
+    android:background="?attr/colorSurface"
+    android:orientation="vertical">
 
-    <LinearLayout
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:background="?attr/colorPrimary"
+        android:minHeight="?attr/actionBarSize"
+        app:subtitleTextColor="?attr/colorOnPrimary"
+        app:titleTextColor="?attr/colorOnPrimary" />
 
-        <Button
-            android:id="@+id/pickButton"
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/scroll"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false">
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/pick_pdf" />
+            android:layout_marginStart="@dimen/content_margin"
+            android:layout_marginEnd="@dimen/content_margin"
+            android:orientation="vertical"
+            android:paddingBottom="16dp">
 
-        <TextView
-            android:id="@+id/fileInfo"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:text="@string/no_file"
-            android:textAppearance="?attr/textAppearanceTitleSmall" />
+            <!-- 1. Import -->
+            <com.google.android.material.card.MaterialCardView style="@style/SectionCard">
 
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="@string/start_hint"
-            app:helperText="@string/start_help">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/startInput"
+                    <TextView
+                        style="@style/SectionTitle"
+                        android:text="@string/section_import" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/importButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/import_pdf"
+                        app:icon="@drawable/ic_folder_open" />
+
+                    <TextView
+                        android:id="@+id/fileInfo"
+                        android:freezesText="true"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/no_file"
+                        android:textAppearance="?attr/textAppearanceBodyLarge"
+                        android:textIsSelectable="true" />
+
+                    <TextView
+                        style="@style/Help"
+                        android:text="@string/import_help" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 2. Bereich -->
+            <com.google.android.material.card.MaterialCardView style="@style/SectionCard">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        style="@style/SectionTitle"
+                        android:text="@string/section_pages" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/HalfField"
+                            android:layout_marginEnd="8dp"
+                            android:hint="@string/from">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/startInput"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:imeOptions="actionNext"
+                                android:inputType="text" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/HalfField"
+                            android:hint="@string/to">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/endInput"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:imeOptions="actionNext"
+                                android:inputType="text" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+
+                    <TextView
+                        style="@style/Help"
+                        android:text="@string/pages_help" />
+
+                    <TextView
+                        style="@style/SectionTitle"
+                        android:layout_marginTop="16dp"
+                        android:text="@string/section_percent" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/HalfField"
+                            android:layout_marginEnd="8dp"
+                            android:hint="@string/from_percent"
+                            app:placeholderText="25/100">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/fromFractionInput"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:imeOptions="actionNext"
+                                android:inputType="text" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/HalfField"
+                            android:hint="@string/to_percent"
+                            app:placeholderText="50/100">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/toFractionInput"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:imeOptions="actionDone"
+                                android:inputType="text" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+
+                    <TextView
+                        style="@style/Help"
+                        android:text="@string/percent_help" />
+
+                    <com.google.android.material.checkbox.MaterialCheckBox
+                        android:id="@+id/toEndCheck"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/to_end" />
+
+                    <com.google.android.material.checkbox.MaterialCheckBox
+                        android:id="@+id/includeEndCheck"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:text="@string/include_end" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/checkButton"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/check" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 3. Export -->
+            <com.google.android.material.card.MaterialCardView style="@style/SectionCard">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        style="@style/SectionTitle"
+                        android:text="@string/section_export" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/folderButton"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/choose_folder"
+                        app:icon="@drawable/ic_folder_open" />
+
+                    <TextView
+                        android:id="@+id/folderInfo"
+                        android:freezesText="true"
+                        style="@style/Help"
+                        android:text="@string/no_folder"
+                        android:textIsSelectable="true" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:hint="@string/filename_hint">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/filenameInput"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:imeOptions="actionDone"
+                            android:inputType="text" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/extractButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="8dp"
+                            android:layout_weight="1"
+                            android:text="@string/export_pdf" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/txtButton"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/export_txt" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Status -->
+            <com.google.android.material.progressindicator.LinearProgressIndicator
+                android:id="@+id/progress"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="text"
-                android:imeOptions="actionNext" />
-        </com.google.android.material.textfield.TextInputLayout>
+                android:layout_marginTop="12dp"
+                android:indeterminate="true"
+                android:visibility="gone" />
 
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:hint="@string/end_hint"
-            app:helperText="@string/end_help">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/endInput"
+            <TextView
+                android:id="@+id/status"
+                        android:freezesText="true"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="text"
-                android:imeOptions="actionNext" />
-        </com.google.android.material.textfield.TextInputLayout>
+                android:layout_marginTop="12dp"
+                android:textAppearance="?attr/textAppearanceBodyLarge"
+                android:textIsSelectable="true" />
 
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:hint="@string/fraction_hint"
-            app:helperText="@string/fraction_help">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/fractionInput"
+            <LinearLayout
+                android:id="@+id/resultActions"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="text"
-                android:imeOptions="actionDone" />
-        </com.google.android.material.textfield.TextInputLayout>
+                android:orientation="horizontal"
+                android:visibility="gone">
 
-        <CheckBox
-            android:id="@+id/toEndCheck"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/to_end" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/openButton"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:text="@string/open_result" />
 
-        <CheckBox
-            android:id="@+id/includeEndCheck"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:checked="true"
-            android:text="@string/include_end" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/shareButton"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/share_result" />
+            </LinearLayout>
 
-        <Button
-            android:id="@+id/checkButton"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/check" />
-
-        <Button
-            android:id="@+id/extractButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/extract" />
-
-        <Button
-            android:id="@+id/txtButton"
-            style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/extract_txt" />
-
-        <ProgressBar
-            android:id="@+id/progress"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:indeterminate="true"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/status"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:textAppearance="?attr/textAppearanceBodyLarge"
-            android:textIsSelectable="true" />
-
-        <TextView
-            android:id="@+id/versionInfo"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:alpha="0.6"
-            android:textAppearance="?attr/textAppearanceBodySmall"
-            android:textIsSelectable="true" />
-    </LinearLayout>
-</ScrollView>
+            <TextView
+                android:id="@+id/versionInfo"
+                style="@style/Help"
+                android:layout_marginTop="24dp"
+                android:textIsSelectable="true" />
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</LinearLayout>

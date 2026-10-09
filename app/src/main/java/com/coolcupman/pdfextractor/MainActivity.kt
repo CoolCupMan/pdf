@@ -1,263 +1,237 @@
 package com.coolcupman.pdfextractor
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.provider.OpenableColumns
 import android.view.View
-import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
-import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.IntentCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
+import androidx.core.widget.NestedScrollView
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
-import com.tom_roush.pdfbox.multipdf.Splitter
-import com.tom_roush.pdfbox.pdmodel.PDDocument
-import com.tom_roush.pdfbox.text.PDFTextStripper
-import kotlinx.coroutines.asCoroutineDispatcher
+import androidx.lifecycle.repeatOnLifecycle
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.progressindicator.LinearProgressIndicator
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.File
-import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity() {
 
-    // PDFBox ist nicht thread-sicher: alle PDF-Zugriffe auf einem Thread.
-    private val pdfExecutor = Executors.newSingleThreadExecutor()
-    private val pdfDispatcher = pdfExecutor.asCoroutineDispatcher()
-
-    private var document: PDDocument? = null
-    private var sourceName = "dokument"
-    private val pageTextCache = HashMap<Int, String>()
-    private var stripper: PDFTextStripper? = null
-    private var pendingRange: PageRange? = null
+    private val vm: ExtractorViewModel by viewModels()
 
     private lateinit var fileInfo: TextView
     private lateinit var startInput: EditText
     private lateinit var endInput: EditText
-    private lateinit var fractionInput: EditText
+    private lateinit var fromFractionInput: EditText
+    private lateinit var toFractionInput: EditText
     private lateinit var toEndCheck: CheckBox
     private lateinit var includeEndCheck: CheckBox
-    private lateinit var progressBar: ProgressBar
+    private lateinit var folderInfo: TextView
+    private lateinit var filenameInput: EditText
+    private lateinit var progress: LinearProgressIndicator
     private lateinit var status: TextView
-    private lateinit var actionButtons: List<Button>
+    private lateinit var resultActions: View
+    private lateinit var documentButtons: List<MaterialButton>
+    private lateinit var importButton: MaterialButton
+    private lateinit var folderButton: MaterialButton
 
-    private val openPdf = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) loadPdf(uri)
+    // Dateiauswahl des Systems (Downloads, Google Files, Drive, SD-Karte …)
+    private val importPdf = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) vm.loadPdf(uri)
     }
+
+    private val chooseFolder =
+        registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { tree ->
+            if (tree != null) {
+                try {
+                    contentResolver.takePersistableUriPermission(
+                        tree,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                    )
+                } catch (e: SecurityException) {
+                }
+                vm.setExportFolder(tree)
+            }
+        }
+
     private val savePdf =
-        registerForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
-            val range = pendingRange
-            if (uri != null && range != null) writePdf(uri, range)
+        registerForActivityResult(ActivityResultContracts.CreateDocument(ExportKind.PDF.mime)) {
+            vm.onSaveLocationChosen(it)
         }
     private val saveTxt =
-        registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
-            val range = pendingRange
-            if (uri != null && range != null) writeTxt(uri, range)
+        registerForActivityResult(ActivityResultContracts.CreateDocument(ExportKind.TXT.mime)) {
+            vm.onSaveLocationChosen(it)
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        PDFBoxResourceLoader.init(applicationContext)
         setContentView(R.layout.activity_main)
+
+        val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
+        toolbar.title = getString(R.string.app_name)
+        applyInsets(findViewById(R.id.root), toolbar, findViewById(R.id.scroll))
 
         fileInfo = findViewById(R.id.fileInfo)
         startInput = findViewById(R.id.startInput)
         endInput = findViewById(R.id.endInput)
-        fractionInput = findViewById(R.id.fractionInput)
+        fromFractionInput = findViewById(R.id.fromFractionInput)
+        toFractionInput = findViewById(R.id.toFractionInput)
         toEndCheck = findViewById(R.id.toEndCheck)
         includeEndCheck = findViewById(R.id.includeEndCheck)
-        progressBar = findViewById(R.id.progress)
+        folderInfo = findViewById(R.id.folderInfo)
+        filenameInput = findViewById(R.id.filenameInput)
+        progress = findViewById(R.id.progress)
         status = findViewById(R.id.status)
+        resultActions = findViewById(R.id.resultActions)
+        importButton = findViewById(R.id.importButton)
+        folderButton = findViewById(R.id.folderButton)
 
-        val pickButton = findViewById<Button>(R.id.pickButton)
-        val checkButton = findViewById<Button>(R.id.checkButton)
-        val extractButton = findViewById<Button>(R.id.extractButton)
-        val txtButton = findViewById<Button>(R.id.txtButton)
-        actionButtons = listOf(checkButton, extractButton, txtButton)
+        val checkButton = findViewById<MaterialButton>(R.id.checkButton)
+        val extractButton = findViewById<MaterialButton>(R.id.extractButton)
+        val txtButton = findViewById<MaterialButton>(R.id.txtButton)
+        documentButtons = listOf(checkButton, extractButton, txtButton)
 
-        pickButton.setOnClickListener { openPdf.launch(arrayOf("application/pdf")) }
-        checkButton.setOnClickListener { resolveRange { showRange(it) } }
+        importButton.setOnClickListener { importPdf.launch("application/pdf") }
+        folderButton.setOnClickListener { chooseFolder.launch(vm.state.value.exportFolder) }
+        checkButton.setOnClickListener { vm.check(inputs()) }
         extractButton.setOnClickListener {
-            resolveRange { range ->
-                showRange(range)
-                pendingRange = range
-                savePdf.launch("${sourceName}_S${range.start}-${range.end}.pdf")
-            }
+            vm.export(ExportKind.PDF, inputs(), filenameInput.text.toString())
         }
         txtButton.setOnClickListener {
-            resolveRange { range ->
-                showRange(range)
-                pendingRange = range
-                saveTxt.launch("${sourceName}_S${range.start}-${range.end}.txt")
-            }
+            vm.export(ExportKind.TXT, inputs(), filenameInput.text.toString())
         }
-        toEndCheck.setOnCheckedChangeListener { _, checked ->
-            endInput.isEnabled = !checked
-            fractionInput.isEnabled = !checked
-        }
+        findViewById<MaterialButton>(R.id.openButton).setOnClickListener { openResult(share = false) }
+        findViewById<MaterialButton>(R.id.shareButton).setOnClickListener { openResult(share = true) }
 
-        findViewById<TextView>(R.id.versionInfo).text =
-            getString(R.string.version_info, BuildConfig.VERSION_NAME, BuildConfig.APPLICATION_ID)
-        setActionsEnabled(false)
-    }
+        toEndCheck.setOnCheckedChangeListener { _, _ -> updateEndFields() }
+        updateEndFields()
 
-    override fun onDestroy() {
-        super.onDestroy()
-        val doc = document
-        document = null
-        pdfExecutor.execute { doc?.close() }
-        pdfExecutor.shutdown()
-    }
-
-    private fun loadPdf(uri: Uri) {
-        setBusy(true, getString(R.string.loading))
-        lifecycleScope.launch {
-            try {
-                val total = withContext(pdfDispatcher) {
-                    document?.close()
-                    document = null
-                    pageTextCache.clear()
-
-                    // Zuerst in den Cache kopieren: schneller wahlfreier Zugriff auch bei großen PDFs.
-                    val file = File(cacheDir, "input.pdf")
-                    contentResolver.openInputStream(uri)!!.use { input ->
-                        file.outputStream().use { input.copyTo(it) }
-                    }
-                    val doc = PDDocument.load(file)
-                    doc.isAllSecurityToBeRemoved = true
-                    document = doc
-                    stripper = PDFTextStripper()
-                    doc.numberOfPages
-                }
-                sourceName = displayName(uri)
-                fileInfo.text = getString(R.string.file_info, sourceName, total)
-                setBusy(false, getString(R.string.loaded, total))
-                setActionsEnabled(true)
-            } catch (e: Exception) {
-                setBusy(false, getString(R.string.error, e.message ?: e.javaClass.simpleName))
-                setActionsEnabled(false)
-            }
-        }
-    }
-
-    private fun resolveRange(onResolved: (PageRange) -> Unit) {
-        val doc = document ?: return
-        val startText = startInput.text.toString()
-        val endText = endInput.text.toString()
-        val fractionText = fractionInput.text.toString()
-        val toEnd = toEndCheck.isChecked
-        val includeEnd = includeEndCheck.isChecked
-
-        setBusy(true, getString(R.string.searching))
-        lifecycleScope.launch {
-            try {
-                val range = withContext(pdfDispatcher) {
-                    PageRangeResolver(
-                        total = doc.numberOfPages,
-                        pageText = { page -> pageText(doc, page) },
-                        progress = { page, total -> postProgress(page, total) },
-                    ).resolve(startText, endText, fractionText, toEnd, includeEnd)
-                }
-                setBusy(false, null)
-                onResolved(range)
-            } catch (e: RangeException) {
-                setBusy(false, e.message)
-            } catch (e: Exception) {
-                setBusy(false, getString(R.string.error, e.message ?: e.javaClass.simpleName))
-            }
-        }
-    }
-
-    /** Muss auf [pdfDispatcher] laufen. */
-    private fun pageText(doc: PDDocument, page: Int): String =
-        pageTextCache.getOrPut(page) {
-            val s = stripper ?: PDFTextStripper().also { stripper = it }
-            s.startPage = page
-            s.endPage = page
-            s.getText(doc)
-        }
-
-    private fun postProgress(page: Int, total: Int) {
-        runOnUiThread {
-            progressBar.isIndeterminate = false
-            progressBar.max = total
-            progressBar.progress = page
-            status.text = getString(R.string.search_progress, page, total)
-        }
-    }
-
-    private fun showRange(r: PageRange) {
-        status.text = getString(
-            R.string.range_info, r.start, r.end, r.count, r.total, r.startInfo, r.endInfo
+        findViewById<TextView>(R.id.versionInfo).text = getString(
+            R.string.version_info,
+            BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE, BuildConfig.APPLICATION_ID,
         )
-    }
 
-    private fun writePdf(uri: Uri, range: PageRange) {
-        val doc = document ?: return
-        setBusy(true, getString(R.string.writing))
         lifecycleScope.launch {
-            try {
-                withContext(pdfDispatcher) {
-                    val parts = Splitter().apply {
-                        setStartPage(range.start)
-                        setEndPage(range.end)
-                        setSplitAtPage(range.count)
-                    }.split(doc)
-                    val part = parts.first()
-                    try {
-                        contentResolver.openOutputStream(uri)!!.use { part.save(it) }
-                    } finally {
-                        parts.forEach { it.close() }
-                    }
-                }
-                setBusy(false, getString(R.string.saved_pdf, range.start, range.end, range.count))
-            } catch (e: Exception) {
-                setBusy(false, getString(R.string.error, e.message ?: e.javaClass.simpleName))
-            }
-        }
-    }
-
-    private fun writeTxt(uri: Uri, range: PageRange) {
-        val doc = document ?: return
-        setBusy(true, getString(R.string.writing))
-        lifecycleScope.launch {
-            try {
-                withContext(pdfDispatcher) {
-                    contentResolver.openOutputStream(uri)!!.bufferedWriter().use { w ->
-                        for (p in range.start..range.end) {
-                            postProgress(p, range.end)
-                            w.write("===== Seite $p =====\n")
-                            w.write(pageText(doc, p))
-                            w.write("\n")
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch { vm.state.collect(::render) }
+                launch {
+                    vm.events.collect { e ->
+                        when (e) {
+                            is UiEvent.AskSaveLocation -> when (e.kind) {
+                                ExportKind.PDF -> savePdf.launch(e.fileName)
+                                ExportKind.TXT -> saveTxt.launch(e.fileName)
+                            }
                         }
                     }
                 }
-                setBusy(false, getString(R.string.saved_txt, range.start, range.end))
-            } catch (e: Exception) {
-                setBusy(false, getString(R.string.error, e.message ?: e.javaClass.simpleName))
             }
         }
+
+        if (savedInstanceState == null) handleIncoming(intent)
     }
 
-    private fun displayName(uri: Uri): String {
-        var name: String? = null
-        contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
-            if (it.moveToFirst()) name = it.getString(0)
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIncoming(intent)
+    }
+
+    /** PDF aus "Öffnen mit" oder "Teilen" (z. B. Google Files). */
+    private fun handleIncoming(intent: Intent?) {
+        val uri = when (intent?.action) {
+            Intent.ACTION_VIEW -> intent.data
+            Intent.ACTION_SEND -> IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
+            else -> null
         }
-        return (name ?: "dokument").removeSuffix(".pdf").removeSuffix(".PDF")
+        if (uri != null) vm.loadPdf(uri)
     }
 
-    private fun setBusy(busy: Boolean, message: String?) {
-        progressBar.visibility = if (busy) View.VISIBLE else View.GONE
-        progressBar.isIndeterminate = true
-        if (message != null) status.text = message
-        setActionsEnabled(!busy && document != null)
+    /** Edge-to-Edge (Pflicht ab Android 15): Inhalt von System- und Kamera-Leisten und Tastatur freihalten. */
+    private fun applyInsets(root: View, toolbar: View, scroll: NestedScrollView) {
+        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+            val bars = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+            )
+            val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+            toolbar.updatePadding(left = bars.left, top = bars.top, right = bars.right)
+            scroll.updatePadding(
+                left = bars.left,
+                right = bars.right,
+                bottom = maxOf(bars.bottom, ime.bottom),
+            )
+            WindowInsetsCompat.CONSUMED
+        }
     }
 
-    private fun setActionsEnabled(enabled: Boolean) {
-        actionButtons.forEach { it.isEnabled = enabled }
+    private fun inputs() = RangeInputs(
+        start = startInput.text.toString(),
+        end = endInput.text.toString(),
+        fromFraction = fromFractionInput.text.toString(),
+        toFraction = toFractionInput.text.toString(),
+        toEnd = toEndCheck.isChecked,
+        includeEndMatch = includeEndCheck.isChecked,
+    )
+
+    private fun updateEndFields() {
+        val manualEnd = !toEndCheck.isChecked
+        endInput.isEnabled = manualEnd
+        toFractionInput.isEnabled = manualEnd
+    }
+
+    private fun render(s: UiState) {
+        fileInfo.text = s.fileInfo ?: getString(R.string.no_file)
+        s.status?.let { status.text = it }
+
+        progress.visibility = if (s.busy) View.VISIBLE else View.GONE
+        val p = s.progress
+        if (p != null) {
+            progress.isIndeterminate = false
+            progress.max = p.second
+            progress.setProgressCompat(p.first, false)
+        } else {
+            progress.isIndeterminate = true
+        }
+
+        importButton.isEnabled = !s.busy
+        folderButton.isEnabled = !s.busy
+        documentButtons.forEach { it.isEnabled = !s.busy && s.hasDocument }
+
+        folderInfo.text = s.exportFolder
+            ?.let { getString(R.string.folder_info, StoragePaths.describeFolder(this, it)) }
+            ?: getString(R.string.no_folder)
+
+        resultActions.visibility = if (s.lastOutput != null && !s.busy) View.VISIBLE else View.GONE
+    }
+
+    private fun openResult(share: Boolean) {
+        val s = vm.state.value
+        val uri = s.lastOutput ?: return
+        val mime = s.lastOutputMime ?: "*/*"
+        val intent = if (share) {
+            Intent.createChooser(
+                Intent(Intent.ACTION_SEND).setType(mime).putExtra(Intent.EXTRA_STREAM, uri)
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
+                null,
+            )
+        } else {
+            Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime)
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        try {
+            startActivity(intent)
+        } catch (e: ActivityNotFoundException) {
+            Toast.makeText(this, R.string.no_viewer, Toast.LENGTH_SHORT).show()
+        }
     }
 }

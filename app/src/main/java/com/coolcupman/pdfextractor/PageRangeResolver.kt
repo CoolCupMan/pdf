@@ -2,6 +2,7 @@ package com.coolcupman.pdfextractor
 
 import java.util.Locale
 import kotlin.math.ceil
+import kotlin.math.floor
 
 /** Fehler bei der Bereichsermittlung, Meldung wird direkt angezeigt. */
 class RangeException(message: String) : Exception(message)
@@ -88,25 +89,33 @@ class PageRangeResolver(
         if (total < 1) throw RangeException("Das PDF enthält keine Seiten.")
     }
 
+    /**
+     * @param startInput Seitenzahl oder Suchtext (leer = Seite 1)
+     * @param endInput Seitenzahl oder Suchtext (leer = Ende)
+     * @param fromFraction "prozentual von", z. B. 25/100 -> ab Seite 251 bei 1000 Seiten; hat Vorrang vor [startInput]
+     * @param toFraction "prozentual bis", z. B. 50/100 -> bis Seite 500; hat Vorrang vor [endInput]
+     */
     fun resolve(
         startInput: String,
         endInput: String,
-        fractionInput: String,
+        fromFraction: String,
+        toFraction: String,
         toEnd: Boolean,
         includeEndMatchPage: Boolean,
     ): PageRange {
-        val (start, startInfo) = resolveStart(startInput)
+        val (start, startInfo) =
+            if (fromFraction.isNotBlank()) {
+                val f = fractionSpec(fromFraction, "Prozentual von")
+                fractionStartPage(f).let { it to "prozentual ab ${fromFraction.trim()} (Seite $it)" }
+            } else {
+                resolveStart(startInput)
+            }
 
         val (end, endInfo) = when {
             toEnd -> total to "bis zum Ende"
-            fractionInput.isNotBlank() -> {
-                when (val spec = PageSpecParser.parse(fractionInput)) {
-                    is PageSpec.Fraction -> fractionPage(spec) to "prozentual ${fractionInput.trim()}"
-                    is PageSpec.End -> total to "bis zum Ende"
-                    else -> throw RangeException(
-                        "Prozent-Feld: bitte z. B. 25/100 oder 25% eingeben."
-                    )
-                }
+            toFraction.isNotBlank() -> {
+                val f = fractionSpec(toFraction, "Prozentual bis")
+                fractionPage(f).let { it to "prozentual bis ${toFraction.trim()} (Seite $it)" }
             }
             else -> resolveEnd(endInput, start, includeEndMatchPage)
         }
@@ -117,12 +126,19 @@ class PageRangeResolver(
         return PageRange(start, end, total, startInfo, endInfo)
     }
 
+    private fun fractionSpec(input: String, label: String): PageSpec.Fraction =
+        when (val spec = PageSpecParser.parse(input)) {
+            is PageSpec.Fraction -> spec
+            is PageSpec.End -> PageSpec.Fraction(1.0, 1.0)
+            else -> throw RangeException("$label: bitte z. B. 25/100 oder 25% eingeben.")
+        }
+
     private fun resolveStart(input: String): Pair<Int, String> =
         when (val spec = PageSpecParser.parse(input)) {
             null -> 1 to "ab Seite 1"
             is PageSpec.End -> total to "letzte Seite"
             is PageSpec.Page -> checkPage(spec.number, "Startseite") to "ab Seite ${spec.number}"
-            is PageSpec.Fraction -> fractionPage(spec).let { it to "ab ${input.trim()} (Seite $it)" }
+            is PageSpec.Fraction -> fractionStartPage(spec).let { it to "ab ${input.trim()} (Seite $it)" }
             is PageSpec.Text -> {
                 val p = findText(spec.query, 1)
                     ?: throw RangeException("Starttext „${spec.query}“ wurde nicht gefunden.")
@@ -156,13 +172,25 @@ class PageRangeResolver(
 
     /** z. B. 25/100 bei 1000 Seiten -> Seite 250. */
     private fun fractionPage(f: PageSpec.Fraction): Int {
+        val ratio = ratio(f)
+        // kleine Toleranz gegen Rundungsfehler (z. B. 1000 * 0.29)
+        val page = ceil(total * ratio - 1e-9).toInt()
+        return page.coerceIn(1, total)
+    }
+
+    /** Erste Seite nach dem Anteil: 25/100 bei 1000 Seiten -> Seite 251, 0/100 -> Seite 1. */
+    private fun fractionStartPage(f: PageSpec.Fraction): Int {
+        val ratio = ratio(f)
+        val page = floor(total * ratio + 1e-9).toInt() + 1
+        return page.coerceIn(1, total)
+    }
+
+    private fun ratio(f: PageSpec.Fraction): Double {
         if (f.denominator <= 0.0) throw RangeException("Nenner muss größer als 0 sein.")
         if (f.numerator < 0.0) throw RangeException("Prozentwert darf nicht negativ sein.")
         val ratio = f.numerator / f.denominator
         if (ratio > 1.0) throw RangeException("Mehr als 100 % ist nicht möglich.")
-        // kleine Toleranz gegen Rundungsfehler (z. B. 1000 * 0.29)
-        val page = ceil(total * ratio - 1e-9).toInt()
-        return page.coerceIn(1, total)
+        return ratio
     }
 
     private fun findText(query: String, from: Int): Int? {
